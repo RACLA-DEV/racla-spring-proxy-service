@@ -1,0 +1,39 @@
+server:
+  port: 3004
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: owo-spring-proxy-service-v2
+  mvc:
+    charset: UTF-8
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always 
+
+logging:
+  level:
+    org.springframework.security: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    com.gongroin.owouserservice: DEBUG
+    org.springframework.transaction: DEBUG
+
+actuator:
+    token: your-token-here
