@@ -17,7 +17,7 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/proxy")
+@RequestMapping("/api/v2/racla/proxy")
 @RequiredArgsConstructor
 public class ProxyController {
     private final List<String> allowedDomains = Arrays.asList("https://v-archive.net", "https://hard-archive.com");
