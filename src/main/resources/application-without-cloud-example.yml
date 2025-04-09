@@ -1,5 +1,11 @@
 server:
   port: 3004
+  error:
+    whitelabel:
+      enabled: false
+    include-stacktrace: never
+    include-message: always
+    include-binding-errors: always
   servlet:
     encoding:
       charset: UTF-8
@@ -9,6 +15,9 @@ server:
 spring:
   application:
     name: owo-spring-proxy-service-v2
+  web:
+    resources:
+      add-mappings: false
   mvc:
     charset: UTF-8
   jpa:

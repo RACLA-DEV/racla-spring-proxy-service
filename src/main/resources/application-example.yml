@@ -3,6 +3,9 @@ spring:
     name: owo-spring-proxy-service-v2
   mvc:
     charset: UTF-8
+  web:
+    resources:
+      add-mappings: false
   jpa:
     show-sql: true
     properties:
@@ -18,6 +21,12 @@ logging:
     org.springframework.transaction: DEBUG
 
 server:
+  error:
+    whitelabel:
+      enabled: false
+    include-stacktrace: never
+    include-message: always
+    include-binding-errors: always
   servlet:
     encoding:
       charset: UTF-8
