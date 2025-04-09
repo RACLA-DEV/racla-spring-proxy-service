@@ -35,7 +35,7 @@ java -jar build/libs/racla-spring-proxy-service-*.war
 
 ### 프록시 요청 엔드포인트
 
-- **URL**: `/proxy`
+- **URL**: `/api/v2/racla/proxy`
 - **Method**: `POST`
 - **Content-Type**: `application/json`
 
