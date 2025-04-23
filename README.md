@@ -1,8 +1,8 @@
 # RACLA Spring Proxy Service
 
-[RACLA](https://r-archive.zip)에서 [V-ARCHIVE](https://v-archive.net), [전일 아카이브](https://hard-archive.com) 등 외부 API 또는 서비스와의 CORS 이슈를 해결하기 위한 프록시 서비스입니다.    
+[RACLA](https://racla.app)에서 [V-ARCHIVE](https://v-archive.net), [전일 아카이브](https://hard-archive.com) 등 외부 API 또는 서비스와의 CORS 이슈를 해결하기 위한 프록시 서비스입니다.    
 
-이 프로젝트는 Spring Cloud 적용을 위해 기존의 NestJS + TypeScript로 작성된 [RACLA Proxy Service V2](https://github.com/R-ARCHIVE-TEAM/racla-proxy-service-v2)를 Spring Boot 기반으로 완전히 재작성한 버전입니다. 헤더 처리 방식 등 일부 구현 내용이 변경되었으므로, NestJS 버전의 RACLA Proxy Service V2 코드를 활용할 경우 일부 수정이 필요할 수 있습니다.
+이 프로젝트는 Spring Cloud 적용을 위해 기존의 NestJS + TypeScript로 작성된 [RACLA Proxy Service V2](https://github.com/RACLA-DEV/racla-proxy-service-v2)를 Spring Boot 기반으로 완전히 재작성한 버전입니다. 헤더 처리 방식 등 일부 구현 내용이 변경되었으므로, NestJS 버전의 RACLA Proxy Service V2 코드를 활용할 경우 일부 수정이 필요할 수 있습니다.
 
 추후에 제공될 신규 데스크톱 앱에서는 프록시 주소 변경 기능이 추가될 예정으로 사용자가 직접 구축하여 사용할 수 있습니다.
 
