@@ -1,4 +1,4 @@
-# RACLA Spring Proxy Service V2
+# RACLA Spring Proxy Service
 
 [RACLA](https://r-archive.zip)에서 [V-ARCHIVE](https://v-archive.net), [전일 아카이브](https://hard-archive.com) 등 외부 API 또는 서비스와의 CORS 이슈를 해결하기 위한 프록시 서비스입니다.    
 
