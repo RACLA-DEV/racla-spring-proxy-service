@@ -1,31 +1,51 @@
 package app.racla.raclaspringproxyservicev2.Controller;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.*;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
-
-import app.racla.raclaspringproxyservicev2.DTO.ProxyRequest;
-import app.racla.raclaspringproxyservicev2.DTO.ProxyResponse;
-
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import app.racla.raclaspringproxyservicev2.DTO.ProxyRequest;
+import app.racla.raclaspringproxyservicev2.DTO.ProxyResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/v2/racla/proxy")
 @RequiredArgsConstructor
 public class ProxyController {
-    private final List<String> allowedDomains = Arrays.asList("https://v-archive.net", "https://hard-archive.com");
+    private final List<String> allowedDomains = Arrays.asList("https://v-archive.net",
+            "https://hard-archive.com", "https://platinalab.net");
 
     private final RestTemplate restTemplate;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    // 이미 URL 인코딩된 패턴 (예: %XX 형식)
+    private final Pattern encodedPattern = Pattern.compile(".*%[0-9A-Fa-f]{2}.*");
+
     @PostMapping
-    public ResponseEntity<?> handleProxyRequest(@RequestBody ProxyRequest proxyRequest, @RequestHeader Map<String, String> requestHeaders) {
+    public ResponseEntity<?> handleProxyRequest(@RequestBody ProxyRequest proxyRequest,
+            @RequestHeader Map<String, String> requestHeaders) {
         try {
             String url = proxyRequest.getUrl();
             String method = proxyRequest.getMethod();
@@ -34,33 +54,80 @@ public class ProxyController {
             Map<String, String> headers = proxyRequest.getHeaders();
 
             if (url == null || url.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ProxyResponse(HttpStatus.BAD_REQUEST.value(), null, "URL이 필요합니다"));
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        new ProxyResponse(HttpStatus.BAD_REQUEST.value(), null, "URL이 필요합니다"));
             }
 
-            // URL 유효성 검사
-            URI uri = new URI(url);
-            String baseUrl = uri.getScheme() + "://" + uri.getHost();
+            // 원본 URL 로그
+            log.info("요청된 원본 URL: {}", url);
 
+            // URL 파싱 및 도메인 확인
+            String[] urlParts = url.split("://", 2);
+            if (urlParts.length < 2) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        new ProxyResponse(HttpStatus.BAD_REQUEST.value(), null, "잘못된 URL 형식입니다"));
+            }
+
+            String protocol = urlParts[0];
+            String[] hostAndPath = urlParts[1].split("/", 2);
+            String host = hostAndPath[0];
+            String path = hostAndPath.length > 1 ? "/" + hostAndPath[1] : "/";
+
+            // 도메인 확인
+            String baseUrl = protocol + "://" + host;
             if (!allowedDomains.contains(baseUrl)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(new ProxyResponse(HttpStatus.FORBIDDEN.value(), null, "허용되지 않은 도메인입니다"));
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                        new ProxyResponse(HttpStatus.FORBIDDEN.value(), null, "허용되지 않은 도메인입니다"));
             }
+
+            // 경로의 한글 부분 인코딩 처리
+            StringBuilder processedPath = new StringBuilder();
+            if (path.length() > 1) {
+                String[] segments = path.substring(1).split("/");
+                for (String segment : segments) {
+                    if (segment.isEmpty())
+                        continue;
+
+                    // 쿼리 파라미터 분리
+                    String[] queryParts = segment.split("\\?", 2);
+                    String pathSegment = queryParts[0];
+
+                    // 한글 포함 여부 및 이미 인코딩 되었는지 확인
+                    if (containsKorean(pathSegment)
+                            && !encodedPattern.matcher(pathSegment).matches()) {
+                        pathSegment = URLEncoder.encode(pathSegment, StandardCharsets.UTF_8.name());
+                    }
+
+                    processedPath.append("/").append(pathSegment);
+
+                    // 쿼리 스트링 추가
+                    if (queryParts.length > 1) {
+                        processedPath.append("?").append(queryParts[1]);
+                    }
+                }
+            }
+
+            // 최종 URL 구성
+            String processedUrl =
+                    baseUrl + (processedPath.length() > 0 ? processedPath.toString() : "/");
+            log.info("처리된 URL: {}", processedUrl);
+
+            URI uri = new URI(processedUrl);
 
             // 클라이언트에서 받은 원래 헤더를 먼저 적용
             HttpHeaders httpHeaders = new HttpHeaders();
             requestHeaders.forEach((key, value) -> {
-                if (!key.equalsIgnoreCase("content-length") && 
-                    !key.equalsIgnoreCase("accept-encoding")) {
+                if (!key.equalsIgnoreCase("content-length")
+                        && !key.equalsIgnoreCase("accept-encoding")) {
                     httpHeaders.add(key, value);
                 }
             });
-            
+
             // 요청에서 명시적으로 전달된 헤더가 있으면 덮어씌움
             if (headers != null) {
                 headers.forEach((key, value) -> {
-                    if (!key.equalsIgnoreCase("content-length") && 
-                        !key.equalsIgnoreCase("accept-encoding")) {
+                    if (!key.equalsIgnoreCase("content-length")
+                            && !key.equalsIgnoreCase("accept-encoding")) {
                         httpHeaders.set(key, value);
                     }
                 });
@@ -70,6 +137,9 @@ public class ProxyController {
             httpHeaders.set("host", uri.getHost());
             httpHeaders.set("origin", baseUrl);
             httpHeaders.set("referer", baseUrl + "/");
+
+            // Accept 헤더 추가 - 모든 타입 수락
+            httpHeaders.set("Accept", "*/*");
             httpHeaders.set("Content-Type", "application/json");
 
             // 쿼리 파라미터나 요청 본문 처리
@@ -78,56 +148,90 @@ public class ProxyController {
                 UriComponentsBuilder builder = UriComponentsBuilder.fromUri(uri);
                 data.forEach((key, value) -> {
                     if (!"headers".equals(key) && value != null) {
-                        builder.queryParam(key, value.toString());
+                        // 모든 값을 문자열로 변환하여 안전하게 처리
+                        String strValue = value.toString();
+                        // 쿼리 파라미터 값도 인코딩
+                        builder.queryParam(key, strValue);
                     }
                 });
-                uri = builder.build().toUri();
+                // UriComponentsBuilder가 자동으로 인코딩을 처리하도록 함
+                uri = builder.build(true).toUri();
+                log.info("쿼리 파라미터 추가 후 최종 URI: {}", uri);
             } else if ("body".equals(type) && data != null) {
                 requestBody = data;
             }
 
             HttpEntity<?> requestEntity = new HttpEntity<>(requestBody, httpHeaders);
-            ResponseEntity<Object> responseEntity;
 
             // 요청 실행
-            if ("GET".equalsIgnoreCase(method)) {
-                responseEntity = restTemplate.exchange(
-                    uri,
-                    HttpMethod.GET,
-                    requestEntity,
-                    Object.class
-                );
-            } else if ("POST".equalsIgnoreCase(method)) {
-                responseEntity = restTemplate.exchange(
-                    uri,
-                    HttpMethod.POST,
-                    requestEntity,
-                    Object.class
-                );
-            } else {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ProxyResponse(HttpStatus.BAD_REQUEST.value(), null, "지원되지 않는 HTTP 메소드입니다."));
+            try {
+                ResponseEntity<String> stringResponse;
+
+                if ("GET".equalsIgnoreCase(method)) {
+                    stringResponse =
+                            restTemplate.exchange(uri, HttpMethod.GET, requestEntity, String.class);
+                } else if ("POST".equalsIgnoreCase(method)) {
+                    stringResponse = restTemplate.exchange(uri, HttpMethod.POST, requestEntity,
+                            String.class);
+                } else {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ProxyResponse(
+                            HttpStatus.BAD_REQUEST.value(), null, "지원되지 않는 HTTP 메소드입니다."));
+                }
+
+                // 컨텐츠 타입 확인
+                MediaType contentType = stringResponse.getHeaders().getContentType();
+                Object responseBody;
+
+                // 응답 처리 - JSON 문자열을 객체로 변환 시도
+                try {
+                    // 응답이 JSON인 경우 객체로 파싱
+                    if (contentType != null && contentType.includes(MediaType.APPLICATION_JSON)) {
+                        responseBody =
+                                objectMapper.readValue(stringResponse.getBody(), Object.class);
+                    }
+                    // Content-Type이 없거나 다른 형식이지만 JSON으로 보이는 경우 파싱 시도
+                    else if (stringResponse.getBody() != null
+                            && stringResponse.getBody().trim().startsWith("{")) {
+                        responseBody =
+                                objectMapper.readValue(stringResponse.getBody(), Object.class);
+                    }
+                    // HTML, 텍스트 또는 기타 형식은 문자열로 유지
+                    else {
+                        responseBody = stringResponse.getBody();
+                    }
+                } catch (Exception e) {
+                    log.warn("응답 파싱 실패, 원본 반환: {}", e.getMessage());
+                    responseBody = stringResponse.getBody();
+                }
+
+                // 응답 구성
+                ProxyResponse response = new ProxyResponse(stringResponse.getStatusCode().value(),
+                        responseBody, null);
+
+                return ResponseEntity.status(stringResponse.getStatusCode())
+                        .contentType(MediaType.APPLICATION_JSON).body(response);
+
+            } catch (Exception e) {
+                log.error("요청 처리 중 오류 발생: {}", e.getMessage());
+                log.error("오류 상세: ", e);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(new ProxyResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), null,
+                                "요청 처리 중 오류: " + e.getMessage()));
             }
-
-            // 응답 구성
-            ProxyResponse response = new ProxyResponse(
-                responseEntity.getStatusCode().value(),
-                responseEntity.getBody(),
-                null
-            );
-
-            return ResponseEntity.status(responseEntity.getStatusCode())
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(response);
-
         } catch (Exception e) {
             log.error("프록시 요청 실패", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ProxyResponse(
-                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                    null,
-                    e.getMessage()
-                ));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ProxyResponse(
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(), null, e.getMessage()));
         }
     }
-} 
+
+    /**
+     * 문자열에 한글이 포함되어 있는지 확인합니다.
+     * 
+     * @param text 확인할 문자열
+     * @return 한글 포함 여부
+     */
+    private boolean containsKorean(String text) {
+        return text.matches(".*[ㄱ-ㅎㅏ-ㅣ가-힣]+.*");
+    }
+}
