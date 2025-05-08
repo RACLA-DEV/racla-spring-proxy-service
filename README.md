@@ -9,7 +9,7 @@
     <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
     <img src="https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen" alt="Spring Boot">
     <img src="https://img.shields.io/badge/Java-17%2B-orange" alt="Java 17+">
-    <a href="https://github.com/R-ARCHIVE-TEAM/racla-spring-proxy-service/actions/workflows/build.yml"><img src="https://github.com/R-ARCHIVE-TEAM/racla-spring-proxy-service/actions/workflows/build.yml/badge.svg" alt="Build"></a>
+    <a href="https://github.com/RACLA-DEV/racla-spring-proxy-service/actions/workflows/build.yml"><img src="https://github.com/RACLA-DEV/racla-spring-proxy-service/actions/workflows/build.yml/badge.svg" alt="Build"></a>
     <a href="https://app.codacy.com/gh/RACLA-DEV/racla-spring-proxy-service/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade"><img src="https://app.codacy.com/project/badge/Grade/a935800786ce4259946a9f6a4b0ea51f"/></a>
   </p>
 </div>
