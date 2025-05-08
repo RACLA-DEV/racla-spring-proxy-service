@@ -1,4 +1,4 @@
-package app.racla.raclaspringproxyservicev2.Config;
+package app.racla.raclaspringproxyservice.Config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -1,4 +1,4 @@
-package app.racla.raclaspringproxyservicev2.Controller;
+package app.racla.raclaspringproxyservice.Controller;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,14 +21,16 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import app.racla.raclaspringproxyservicev2.DTO.ProxyRequest;
-import app.racla.raclaspringproxyservicev2.DTO.ProxyResponse;
+import app.racla.raclaspringproxyservice.DTO.ApiResponse;
+import app.racla.raclaspringproxyservice.DTO.ProxyRequest;
+import app.racla.raclaspringproxyservice.Enum.ErrorCode;
+import app.racla.raclaspringproxyservice.Exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v2/racla/proxy")
+@RequestMapping("/api/v3/racla/proxy")
 @RequiredArgsConstructor
 public class ProxyController {
     private final List<String> allowedDomains = Arrays.asList("https://v-archive.net",
@@ -44,7 +45,8 @@ public class ProxyController {
     private final Pattern encodedPattern = Pattern.compile(".*%[0-9A-Fa-f]{2}.*");
 
     @PostMapping
-    public ResponseEntity<?> handleProxyRequest(@RequestBody ProxyRequest proxyRequest,
+    public ResponseEntity<ApiResponse<Object>> handleProxyRequest(
+            @RequestBody ProxyRequest proxyRequest,
             @RequestHeader Map<String, String> requestHeaders) {
         try {
             String url = proxyRequest.getUrl();
@@ -54,8 +56,7 @@ public class ProxyController {
             Map<String, String> headers = proxyRequest.getHeaders();
 
             if (url == null || url.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                        new ProxyResponse(HttpStatus.BAD_REQUEST.value(), null, "URL이 필요합니다"));
+                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "URL is required");
             }
 
             // 원본 URL 로그
@@ -64,8 +65,7 @@ public class ProxyController {
             // URL 파싱 및 도메인 확인
             String[] urlParts = url.split("://", 2);
             if (urlParts.length < 2) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                        new ProxyResponse(HttpStatus.BAD_REQUEST.value(), null, "잘못된 URL 형식입니다"));
+                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "Invalid URL format");
             }
 
             String protocol = urlParts[0];
@@ -76,8 +76,7 @@ public class ProxyController {
             // 도메인 확인
             String baseUrl = protocol + "://" + host;
             if (!allowedDomains.contains(baseUrl)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-                        new ProxyResponse(HttpStatus.FORBIDDEN.value(), null, "허용되지 않은 도메인입니다"));
+                throw new BusinessException(ErrorCode.FORBIDDEN, "Forbidden domain");
             }
 
             // 경로의 한글 부분 인코딩 처리
@@ -110,7 +109,7 @@ public class ProxyController {
             // 최종 URL 구성
             String processedUrl =
                     baseUrl + (processedPath.length() > 0 ? processedPath.toString() : "/");
-            log.info("처리된 URL: {}", processedUrl);
+            log.info("Processed URL: {}", processedUrl);
 
             URI uri = new URI(processedUrl);
 
@@ -156,7 +155,7 @@ public class ProxyController {
                 });
                 // UriComponentsBuilder가 자동으로 인코딩을 처리하도록 함
                 uri = builder.build(true).toUri();
-                log.info("쿼리 파라미터 추가 후 최종 URI: {}", uri);
+                log.info("Query parameters added, final URI: {}", uri);
             } else if ("body".equals(type) && data != null) {
                 requestBody = data;
             }
@@ -174,8 +173,8 @@ public class ProxyController {
                     stringResponse = restTemplate.exchange(uri, HttpMethod.POST, requestEntity,
                             String.class);
                 } else {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ProxyResponse(
-                            HttpStatus.BAD_REQUEST.value(), null, "지원되지 않는 HTTP 메소드입니다."));
+                    throw new BusinessException(ErrorCode.UNSUPPORTED_HTTP_METHOD,
+                            "Unsupported HTTP method");
                 }
 
                 // 컨텐츠 타입 확인
@@ -200,28 +199,30 @@ public class ProxyController {
                         responseBody = stringResponse.getBody();
                     }
                 } catch (Exception e) {
-                    log.warn("응답 파싱 실패, 원본 반환: {}", e.getMessage());
+                    log.warn("Failed to parse response, returning original response: {}",
+                            e.getMessage());
                     responseBody = stringResponse.getBody();
                 }
 
-                // 응답 구성
-                ProxyResponse response = new ProxyResponse(stringResponse.getStatusCode().value(),
-                        responseBody, null);
-
-                return ResponseEntity.status(stringResponse.getStatusCode())
-                        .contentType(MediaType.APPLICATION_JSON).body(response);
+                if (String.valueOf(stringResponse.getStatusCode().value()).startsWith("2")) {
+                    return ResponseEntity.status(stringResponse.getStatusCode())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(ApiResponse.success(responseBody));
+                } else {
+                    return ResponseEntity.status(stringResponse.getStatusCode())
+                            .contentType(MediaType.APPLICATION_JSON).body(ApiResponse.error(
+                                    "Error occurred while processing request.", responseBody));
+                }
 
             } catch (Exception e) {
-                log.error("요청 처리 중 오류 발생: {}", e.getMessage());
-                log.error("오류 상세: ", e);
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(new ProxyResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), null,
-                                "요청 처리 중 오류: " + e.getMessage()));
+                log.error("Proxy request failed: {}", e.getMessage());
+                throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
+                        "Error occurred while processing request.");
             }
         } catch (Exception e) {
-            log.error("프록시 요청 실패", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ProxyResponse(
-                    HttpStatus.INTERNAL_SERVER_ERROR.value(), null, e.getMessage()));
+            log.error("Proxy request failed: {}", e.getMessage());
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
+                    "Error occurred while processing request.");
         }
     }
 

@@ -1,6 +1,6 @@
-package app.racla.raclaspringproxyservicev2.Exception;
+package app.racla.raclaspringproxyservice.Exception;
 
-import app.racla.raclaspringproxyservicev2.Enum.ErrorCode;
+import app.racla.raclaspringproxyservice.Enum.ErrorCode;
 import lombok.Getter;
 
 @Getter

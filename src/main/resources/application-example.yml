@@ -1,6 +1,6 @@
 spring:
   application:
-    name: owo-spring-proxy-service-v2
+    name: racla-spring-proxy-service
   mvc:
     charset: UTF-8
   web:
