@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: racla-spring-proxy-service-v2
+    name: racla-spring-proxy-service
   cloud:
     config:
       enabled: false

@@ -1,4 +1,4 @@
-package app.racla.raclaspringproxyservicev2.Config;
+package app.racla.raclaspringproxyservice.Config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -17,16 +17,13 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(csrf -> csrf.disable())
-            .httpBasic(httpBasic -> httpBasic.disable())
-            .formLogin(formLogin -> formLogin.disable())
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/actuator/**").authenticated()
-                .anyRequest().permitAll()
-            )
-            .addFilterBefore(new ActuatorTokenFilter(actuatorToken), BasicAuthenticationFilter.class);
+        http.csrf(csrf -> csrf.disable()).httpBasic(httpBasic -> httpBasic.disable())
+                .formLogin(formLogin -> formLogin.disable())
+                .authorizeHttpRequests(auth -> auth.requestMatchers("/actuator/**").authenticated()
+                        .anyRequest().permitAll())
+                .addFilterBefore(new ActuatorTokenFilter(actuatorToken),
+                        BasicAuthenticationFilter.class);
 
         return http.build();
     }
-} 
+}

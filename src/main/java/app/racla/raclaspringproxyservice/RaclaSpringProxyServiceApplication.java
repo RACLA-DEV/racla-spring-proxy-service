@@ -1,13 +1,13 @@
-package app.racla.raclaspringproxyservicev2;
+package app.racla.raclaspringproxyservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class RaclaSpringProxyServiceV2Application {
+public class RaclaSpringProxyServiceApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(RaclaSpringProxyServiceV2Application.class, args);
+        SpringApplication.run(RaclaSpringProxyServiceApplication.class, args);
     }
 
 }

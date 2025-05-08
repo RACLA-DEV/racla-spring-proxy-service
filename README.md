@@ -1,4 +1,4 @@
-# 🚀 RACLA Spring Proxy Service V2
+# 🚀 RACLA Spring Proxy Service
 
 <div align="center">
   <img src="https://cdn.gongroin.com/gongroin/og-image-racla.png" alt="RACLA" width="600">
@@ -9,7 +9,7 @@
     <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
     <img src="https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen" alt="Spring Boot">
     <img src="https://img.shields.io/badge/Java-17%2B-orange" alt="Java 17+">
-    <a href="https://github.com/R-ARCHIVE-TEAM/racla-spring-proxy-service-v2/actions/workflows/build.yml"><img src="https://github.com/R-ARCHIVE-TEAM/racla-spring-proxy-service-v2/actions/workflows/build.yml/badge.svg" alt="Build"></a>
+    <a href="https://github.com/R-ARCHIVE-TEAM/racla-spring-proxy-service/actions/workflows/build.yml"><img src="https://github.com/R-ARCHIVE-TEAM/racla-spring-proxy-service/actions/workflows/build.yml/badge.svg" alt="Build"></a>
     <a href="https://app.codacy.com/gh/RACLA-DEV/racla-spring-proxy-service/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade"><img src="https://app.codacy.com/project/badge/Grade/a935800786ce4259946a9f6a4b0ea51f"/></a>
   </p>
 </div>
@@ -53,7 +53,7 @@ java -jar build/libs/racla-spring-proxy-service-*.war
 
 ### 프록시 요청 엔드포인트
 
-- **URL**: `/api/v2/racla/proxy`
+- **URL**: `/api/v3/racla/proxy`
 - **Method**: `POST`
 - **Content-Type**: `application/json`
 
